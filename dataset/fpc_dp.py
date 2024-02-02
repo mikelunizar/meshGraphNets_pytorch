@@ -10,42 +10,36 @@ import time
 class FPCBase():
 
     def __init__(self, max_epochs=1, files=None):
-        # Initialize the FPCBase class with default values and provided files.
-        
-        # Set default values and configurations
+
+
         self.open_tra_num = 10
-        self.file_handle = files
+        self.file_handle=files
         self.shuffle_file()
 
-        # Define data keys for processing
-        self.data_keys = ("pos", "node_type", "velocity", "cells", "pressure")
-        self.out_keys = list(self.data_keys) + ['time']
+        self.data_keys = ("mesh_pos", "world_pos", "stress", "node_type", "cells")
+        self.out_keys = list(self.data_keys)  + ['time']
 
-        # Initialize trajectory-related attributes
         self.tra_index = 0
-        self.epcho_num = 1
+        self.epcho_num=1
         self.tra_readed_index = -1
 
-        # Dataset attributes
-        self.tra_len = 600
-        self.time_iterval = 0.01
+        # dataset attr
+        self.tra_len = 400
+        self.time_iterval = 1
 
-        # Containers for opened trajectories and related indices
         self.opened_tra = []
         self.opened_tra_readed_index = {}
         self.opened_tra_readed_random_index = {}
         self.tra_data = {}
         self.max_epochs = max_epochs
 
+    
     def open_tra(self):
-        # Open trajectories until the specified limit is reached.
-        
-        # Iterate over datasets and open trajectories
-        while len(self.opened_tra) < self.open_tra_num:
+        while(len(self.opened_tra) < self.open_tra_num):
+
             tra_index = self.datasets[self.tra_index]
 
             if tra_index not in self.opened_tra:
-                # Add trajectory to opened_tra list and initialize related indices
                 self.opened_tra.append(tra_index)
                 self.opened_tra_readed_index[tra_index] = -1
                 self.opened_tra_readed_random_index[tra_index] = np.random.permutation(self.tra_len - 2)
@@ -53,20 +47,14 @@ class FPCBase():
             self.tra_index += 1
 
             if self.check_if_epcho_end():
-                # Check if an epoch is finished and perform related operations
                 self.epcho_end()
-                print('Epoch Finished')
-
+                print('Epcho Finished')
+    
     def check_and_close_tra(self):
-        # Check and close trajectories that have been fully read.
-        
-        # List to store trajectories to be removed
         to_del = []
         for tra in self.opened_tra:
             if self.opened_tra_readed_index[tra] >= (self.tra_len - 3):
                 to_del.append(tra)
-        
-        # Remove closed trajectories and associated indices
         for tra in to_del:
             self.opened_tra.remove(tra)
             try:
@@ -75,6 +63,8 @@ class FPCBase():
                 del self.tra_data[tra]
             except Exception as e:
                 print(e)
+                
+
 
     def shuffle_file(self):
         datasets = list(self.file_handle.keys())
@@ -91,28 +81,27 @@ class FPCBase():
             return True
         return False
 
-    @staticmethod
-    def datas_to_graph(datas):
-        
-        #("pos", "node_type", "velocity", "cells", "pressure", "time")
-        time_vector = np.ones((datas[0].shape[0], 1))*datas[5]
-        node_attr = np.hstack((datas[1], datas[2][0], datas[4][0], time_vector))
-        "node_type, cur_v, pressure, time"
-        crds = torch.as_tensor(datas[0], dtype=torch.float)
-        # senders = edge_index[0].numpy()
-        # receivers = edge_index[1].numpy()
-        # crds_diff = crds[senders] - crds[receivers]
-        # crds_norm = np.linalg.norm(crds_diff, axis=1, keepdims=True)
-        # edge_attr = np.concatenate((crds_diff, crds_norm), axis=1)
+    def datas_to_graph(self, datas):
 
-        target = datas[2][1]
-        #node_type, cur_v, pressure, time
-        node_attr = torch.as_tensor(node_attr, dtype=torch.float32)
-        # edge_attr = torch.from_numpy(edge_attr)
-        target = torch.from_numpy(target)
-        face = torch.as_tensor(datas[3].T, dtype=torch.long)
-        g = Data(x=node_attr, face=face, y=target, pos=crds)
-        # g = Data(x=node_attr, edge_index=edge_index, edge_attr=edge_attr, y=target, pos=crds)
+        #time_vector = np.ones((datas[0].shape[0], 1))*datas[5]
+        #node_attr = np.hstack((datas[], datas[2][0], datas[4][0]))
+        face = torch.as_tensor(datas[self.data_keys.index('cells')].T, dtype=torch.long)
+        node_type = torch.as_tensor(datas[self.data_keys.index('node_type')], dtype=torch.long)
+        mesh_crds = torch.as_tensor(datas[self.data_keys.index('mesh_pos')], dtype=torch.float)
+        world_crds = torch.as_tensor(datas[self.data_keys.index('world_pos')], dtype=torch.float)
+        stress = torch.as_tensor(datas[self.data_keys.index('stress')], dtype=torch.float)
+        x = torch.cat((node_type, mesh_crds[0], world_crds[0], stress[0]), dim=-1)
+        y = torch.cat((mesh_crds[1], world_crds[1], stress[1]), dim=-1)
+
+        #senders = edge_index[0].numpy()
+        #receivers = edge_index[1].numpy()
+        #crds_diff = crds[senders] - crds[receivers]
+        #crds_norm = np.linalg.norm(crds_diff, axis=1, keepdims=True)
+        #edge_attr = np.concatenate((crds_diff, crds_norm), axis=1)
+        #edge_attr = torch.from_numpy(edge_attr)
+        #target = torch.from_numpy(target)
+        #g = Data(x=node_attr, face=face, y=target, pos=crds)
+        g = Data(x=x, y=y,face=face, pos=mesh_crds[0])
         return g
 
 
@@ -137,15 +126,14 @@ class FPCBase():
 
         datas = []
         for k in self.data_keys:
-            if k in ["velocity", "pressure"]:
+            if k in ["mesh_pos", "world_pos", 'stress']:
                 r = np.array((data[k][selected_frame], data[k][selected_frame+1]), dtype=np.float32)
             else:
                 r = data[k][selected_frame]
                 if k in ["node_type", "cells"]:
                     r = r.astype(np.int32)
             datas.append(r)
-        datas.append(np.array([self.time_iterval * selected_frame], dtype=np.float32))
-        #("pos", "node_type", "velocity", "cells", "pressure", "time")
+        # datas.append(np.array([self.time_iterval * selected_frame], dtype=np.float32))
         g = self.datas_to_graph(datas)
   
         return g
@@ -154,7 +142,7 @@ class FPCBase():
         return self
 
 
-class FPC(IterableDataset):
+class FPCdp(IterableDataset):
     def __init__(self, max_epochs, dataset_dir, split='train') -> None:
 
         super().__init__()
@@ -190,7 +178,7 @@ class FPC_ROLLOUT(IterableDataset):
         self.dataset_dir = dataset_dir
         assert os.path.isfile(dataset_dir), '%s not exist' % dataset_dir
         self.file_handle = h5py.File(dataset_dir, "r")
-        self.data_keys =  ("pos", "node_type", "velocity", "cells", "pressure")
+        self.data_keys =  ("mesh_pos", "world_pos", "stress", "node_type", "cells")
         self.time_iterval = 0.01
         self.load_dataset()
         

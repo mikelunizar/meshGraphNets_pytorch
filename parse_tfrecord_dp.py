@@ -49,22 +49,21 @@ if __name__ == '__main__':
     tf.compat.v1.enable_eager_execution()
 
     tf_datasetPath='./data/deforming_plate'
-    os.makedirs('./data/deforming_plate/processed_', exist_ok=True)
+    os.makedirs('./data/deforming_plate/', exist_ok=True)
 
     for split in ['train', 'test', 'valid']:
         ds = load_dataset(tf_datasetPath, split)
-        save_path='./data/deforming_plate/processed_'+ split  +'.h5'
+        save_path='./data/deforming_plate/'+ split  +'.h5'
         f = h5py.File(save_path, "w")
         print(save_path)
 
         for index, d in enumerate(ds):
-            pos = d['mesh_pos'].numpy()
+            mesh_pos = d['mesh_pos'].numpy()
+            world_pos = d['world_pos'].numpy()
             node_type = d['node_type'].numpy()
-            velocity = d['velocity'].numpy()
+            stress = d['stress'].numpy()
             cells = d['cells'].numpy()
-            pressure = d['pressure'].numpy()
-            data = ("pos", "node_type", "velocity", "cells", "pressure")
-            # d = f.create_dataset(str(index), (len(data), ), dtype=pos.dtype)
+            data = ("mesh_pos", "world_pos", "stress", "node_type", "cells")
             g = f.create_group(str(index))
             for k in data:
              g[k] = eval(k)

@@ -20,7 +20,7 @@ parser.add_argument("--gpu",
 
 parser.add_argument("--model_dir",
                     type=str,
-                    default='checkpoint/simulator.pth')
+                    default='./checkpoint/simulator.pth')
 
 parser.add_argument("--test_split", type=str, default='test')
 parser.add_argument("--rollout_num", type=int, default=1)
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     simulator.load_checkpoint()
     simulator.eval()
 
-    dataset_dir = "/home/jlx/dataset/data"
+    dataset_dir = "./data/cylinder_flow"
     dataset = FPC_ROLLOUT(dataset_dir, split=args.test_split)
     transformer = T.Compose([T.FaceToEdge(), T.Cartesian(norm=False), T.Distance(norm=False)])
     test_loader = DataLoader(dataset=dataset, batch_size=1)

@@ -19,18 +19,18 @@ def decompose_graph(graph):
     # graph: torch_geometric.data.data.Data
     # TODO: make it more robust
     x, edge_index, edge_attr, global_attr = None, None, None, None
-    for key in graph.keys:
-        if key=="x":
-            x = graph.x
-        elif key=="edge_index":
-            edge_index = graph.edge_index
-        elif key=="edge_attr":
-            edge_attr = graph.edge_attr
-        elif key=="global_attr":
-            global_attr = graph.global_attr
-        else:
-            pass
-    return (x, edge_index, edge_attr, global_attr)
+    # for key in graph.keys:
+    #     if key=="x":
+    #         x = graph.x
+    #     elif key=="edge_index":
+    #         edge_index = graph.edge_index
+    #     elif key=="edge_attr":
+    #         edge_attr = graph.edge_attr
+    #     elif key=="global_attr":
+    #         global_attr = graph.global_attr
+    #     else:
+    #         pass
+    return (graph.x, graph.edge_index, graph.edge_attr, global_attr)
 
 # see https://github.com/sungyongs/dpgn/blob/master/utils.py
 def copy_geometric_data(graph):
