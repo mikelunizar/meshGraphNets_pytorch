@@ -1,23 +1,23 @@
 from torch.utils.data import IterableDataset
 import os, numpy as np
 import os.path as osp
-import h5py
+import h5pickle as h5py
 from torch_geometric.data import Data
 import torch
 import math
 import time
 
+
 class FPCBase():
 
     def __init__(self, max_epochs=1, files=None):
 
-
         self.open_tra_num = 10
-        self.file_handle=files
-        self.shuffle_file()
+        self.file_handle = files
+        self.shuffle_file() # read dataset into h5py files
 
         self.data_keys = ("mesh_pos", "world_pos", "stress", "node_type", "cells")
-        self.out_keys = list(self.data_keys)  + ['time']
+        self.out_keys = list(self.data_keys) + ['time']
 
         self.tra_index = 0
         self.epcho_num=1
@@ -33,23 +33,35 @@ class FPCBase():
         self.tra_data = {}
         self.max_epochs = max_epochs
 
-    
     def open_tra(self):
-        while(len(self.opened_tra) < self.open_tra_num):
+        # Continue opening trajectories until the desired number is reached
+        while len(self.opened_tra) < self.open_tra_num:
 
+            # Get the index of the current trajectory
             tra_index = self.datasets[self.tra_index]
 
+            # Check if the current trajectory is not already opened
             if tra_index not in self.opened_tra:
+                # Add the trajectory index to the list of opened trajectories
                 self.opened_tra.append(tra_index)
+
+                # Initialize the read index for the current trajectory
                 self.opened_tra_readed_index[tra_index] = -1
+
+                # Create a random permutation of indices for the current trajectory
                 self.opened_tra_readed_random_index[tra_index] = np.random.permutation(self.tra_len - 2)
 
+            # Move to the next trajectory index
             self.tra_index += 1
 
+            # Check if an epoch (cycle through the entire dataset) is completed
             if self.check_if_epcho_end():
+                # Perform actions at the end of an epoch
                 self.epcho_end()
-                print('Epcho Finished')
-    
+
+                # Print a message indicating that the epoch has finished
+                print('Epoch Finished')
+
     def check_and_close_tra(self):
         to_del = []
         for tra in self.opened_tra:
@@ -63,8 +75,6 @@ class FPCBase():
                 del self.tra_data[tra]
             except Exception as e:
                 print(e)
-                
-
 
     def shuffle_file(self):
         datasets = list(self.file_handle.keys())
@@ -81,29 +91,20 @@ class FPCBase():
             return True
         return False
 
-    def datas_to_graph(self, datas):
+    @staticmethod
+    def datas_to_graph(datas, metadata):
 
-        #time_vector = np.ones((datas[0].shape[0], 1))*datas[5]
-        #node_attr = np.hstack((datas[], datas[2][0], datas[4][0]))
-        face = torch.as_tensor(datas[self.data_keys.index('cells')].T, dtype=torch.long)
-        node_type = torch.as_tensor(datas[self.data_keys.index('node_type')], dtype=torch.long)
-        mesh_crds = torch.as_tensor(datas[self.data_keys.index('mesh_pos')], dtype=torch.float)
-        world_crds = torch.as_tensor(datas[self.data_keys.index('world_pos')], dtype=torch.float)
-        stress = torch.as_tensor(datas[self.data_keys.index('stress')], dtype=torch.float)
+        face = torch.as_tensor(datas[metadata.index('cells')].T, dtype=torch.long)
+        node_type = torch.as_tensor(datas[metadata.index('node_type')], dtype=torch.long)
+        mesh_crds = torch.as_tensor(datas[metadata.index('mesh_pos')], dtype=torch.float)
+        world_crds = torch.as_tensor(datas[metadata.index('world_pos')], dtype=torch.float)
+        stress = torch.as_tensor(datas[metadata.index('stress')], dtype=torch.float)
+
         x = torch.cat((node_type, mesh_crds[0], world_crds[0], stress[0]), dim=-1)
         y = torch.cat((mesh_crds[1], world_crds[1], stress[1]), dim=-1)
 
-        #senders = edge_index[0].numpy()
-        #receivers = edge_index[1].numpy()
-        #crds_diff = crds[senders] - crds[receivers]
-        #crds_norm = np.linalg.norm(crds_diff, axis=1, keepdims=True)
-        #edge_attr = np.concatenate((crds_diff, crds_norm), axis=1)
-        #edge_attr = torch.from_numpy(edge_attr)
-        #target = torch.from_numpy(target)
-        #g = Data(x=node_attr, face=face, y=target, pos=crds)
         g = Data(x=x, y=y,face=face, pos=mesh_crds[0])
         return g
-
 
     def __next__(self):
    
@@ -134,7 +135,7 @@ class FPCBase():
                     r = r.astype(np.int32)
             datas.append(r)
         # datas.append(np.array([self.time_iterval * selected_frame], dtype=np.float32))
-        g = self.datas_to_graph(datas)
+        g = FPCBase.datas_to_graph(datas, self.data_keys)
   
         return g
 
@@ -143,6 +144,7 @@ class FPCBase():
 
 
 class FPCdp(IterableDataset):
+
     def __init__(self, max_epochs, dataset_dir, split='train') -> None:
 
         super().__init__()
@@ -152,7 +154,7 @@ class FPCdp(IterableDataset):
         self.dataset_dir = dataset_dir
         assert os.path.isfile(dataset_dir), '%s not exist' % dataset_dir
         self.file_handle = h5py.File(dataset_dir, "r")
-        print('Dataset '+  self.dataset_dir + ' Initilized')
+        print('Dataset '+  self.dataset_dir + ' Initialized')
 
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
@@ -171,17 +173,16 @@ class FPCdp(IterableDataset):
         return FPCBase(max_epochs=self.max_epochs, files=files)
 
 
-class FPC_ROLLOUT(IterableDataset):
+class FPCdp_ROLLOUT(IterableDataset):
     def __init__(self, dataset_dir, split='test', name='flow pass a cylinder'):
 
         dataset_dir = osp.join(dataset_dir, split+'.h5')
         self.dataset_dir = dataset_dir
         assert os.path.isfile(dataset_dir), '%s not exist' % dataset_dir
         self.file_handle = h5py.File(dataset_dir, "r")
-        self.data_keys =  ("mesh_pos", "world_pos", "stress", "node_type", "cells")
+        self.data_keys = ("mesh_pos", "world_pos", "stress", "node_type", "cells")
         self.time_iterval = 0.01
         self.load_dataset()
-        
 
     def load_dataset(self):
         datasets = list(self.file_handle.keys())
@@ -191,7 +192,7 @@ class FPC_ROLLOUT(IterableDataset):
         
         file_index = self.datasets[file_index]
         self.cur_tra = self.file_handle[file_index]
-        self.cur_targecity_length = self.cur_tra['velocity'].shape[0]
+        self.cur_targecity_length = self.cur_tra['mesh_pos'].shape[0]
         self.cur_tragecity_index = 0
         self.edge_index = None
 
@@ -199,14 +200,13 @@ class FPC_ROLLOUT(IterableDataset):
         if self.cur_tragecity_index==(self.cur_targecity_length - 1):
             raise StopIteration
 
-        datas = []
         data = self.cur_tra
         selected_frame = self.cur_tragecity_index
 
         datas = []
         for k in self.data_keys:
-            if k in ["velocity", "pressure"]:
-                r = np.array((data[k][selected_frame], data[k][selected_frame+1]), dtype=np.float32)
+            if k in ["mesh_pos", "world_pos", 'stress']:
+                r = np.array((data[k][selected_frame], data[k][selected_frame + 1]), dtype=np.float32)
             else:
                 r = data[k][selected_frame]
                 if k in ["node_type", "cells"]:
@@ -215,10 +215,9 @@ class FPC_ROLLOUT(IterableDataset):
         datas.append(np.array([self.time_iterval * selected_frame], dtype=np.float32))
 
         self.cur_tragecity_index += 1
-        g = FPCBase.datas_to_graph(datas)
+        g = FPCBase.datas_to_graph(datas, self.data_keys)
         # self.edge_index = g.edge_index
         return g
-
 
     def __iter__(self):
         return self
