@@ -23,43 +23,8 @@ save_batch = 200
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 simulator = Simulator(message_passing_num=15, node_input_size=11, edge_input_size=3, device=device)
-optimizer= torch.optim.Adam(simulator.parameters(), lr=1e-4)
+optimizer = torch.optim.Adam(simulator.parameters(), lr=1e-4)
 print('Optimizer initialized')
-
-
-def plot_graph(graph):
-    import matplotlib.pyplot as plt
-    # Create a 3D plot
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    positions = graph.x[:, 1:4]
-    edges = graph.edge_index
-    # Plot nodes
-    for i, pos in enumerate(positions):
-        color = graph.x[i, 0]
-        ax.scatter(pos[0], pos[1], pos[2], c=color)
-
-    # Plot edges
-    for edge in edges.transpose(1, 0):
-        x = [positions[edge[0]][0], positions[edge[1]][0]]
-        y = [positions[edge[0]][1], positions[edge[1]][1]]
-        z = [positions[edge[0]][2], positions[edge[1]][2]]
-        ax.plot(x, y, z, color='gray', linestyle='dashed', linewidth=2)
-
-    # Set labels
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-
-    # Show the plot
-    plt.show()
-
-
-def visualize_data(dataloader):
-    for batch_index, graph in enumerate(dataloader):
-        graph = FaceToEdgeTethra().forward(graph)
-        plot_graph(graph)
-        break
 
 
 def train(model: Simulator, dataloader, optimizer):
@@ -90,7 +55,6 @@ def train(model: Simulator, dataloader, optimizer):
             model.save_checkpoint()
 
 
-#@functional_transform('face_to_edge_tethra')
 class FaceToEdgeTethra():
     r"""Converts mesh faces :obj:`[3, num_faces]` to edge indices
     :obj:`[2, num_edges]` (functional name: :obj:`face_to_edge`).
@@ -123,26 +87,13 @@ class FaceToEdgeTethra():
         return data
 
 
-from tqdm import tqdm
-
 
 if __name__ == '__main__':
 
-    #dataset_fpc = FPCdp(dataset_dir=dataset_dir, split='train', max_epochs=50)
-    #train_loader = DataLoader(dataset=dataset_fpc, batch_size=batch_size, num_workers=1)
-    #transformer = T.Compose([T.Cartesian(norm=False), T.Distance(norm=False)])
-    #visualize_data(train_loader)
-    #train(simulator, train_loader, optimizer)
-    dataset_fpc = FPCdp_ROLLOUT(dataset_dir=dataset_dir, split='test')
-    rollout_loader = DataLoader(dataset=dataset_fpc, batch_size=batch_size, num_workers=1)
+    dataset_fpc = FPCdp(dataset_dir=dataset_dir, split='train', max_epochs=50)
+    train_loader = DataLoader(dataset=dataset_fpc, batch_size=batch_size, num_workers=1)
     transformer = T.Compose([T.Cartesian(norm=False), T.Distance(norm=False)])
+    train(simulator, train_loader, optimizer)
 
-    trajectory = []
-    for i in range(1):
-        dataset_fpc.change_file(i)
-        for graph in tqdm(rollout_loader, total=400):
-            graph = FaceToEdgeTethra().forward(graph)
-            graph = transformer(graph)
-            trajectory.append(graph)
 
-    plot_simulation(trajectory)
+

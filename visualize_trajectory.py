@@ -1,0 +1,150 @@
+from dataset import FPCdp, FPCdp_ROLLOUT
+
+from torch_geometric.loader import DataLoader
+
+from concurrent.futures import ThreadPoolExecutor
+
+from pathlib import Path
+import os
+from tqdm import tqdm
+import cv2
+from copy import deepcopy
+import plotly.graph_objects as go
+
+import torch
+
+
+from train_dp import FaceToEdgeTethra
+
+
+dataset_dir = "./data/deforming_plate"
+batch_size = 1
+noise_std=2e-2
+
+print_batch = 10
+save_batch = 200
+
+
+def make_plot_plotly(graph, snapshot, path):
+    # Set your desired axis limits
+    x_limit = [-0.1, 0.3]
+    y_limit = [-0.1, 0.5]
+    z_limit = [-0.1, 0.3]
+    # Sample data for demonstration
+    positions = graph.x[:, 4:7]
+    node_type = graph.x[:, 0]
+    value = graph.x[:, -1]
+    # Node type color map
+    cmap = {1: 'red', 3: 'black'}
+    # Create a 3D scatter plot for nodes with circles and contours
+    node_trace = go.Scatter3d(
+        x=positions[:, 0],
+        y=positions[:, 1],
+        z=positions[:, 2],
+        mode='markers',
+        marker=dict(
+            size=5,
+            color=value,
+            colorscale='Viridis',  # You can choose a different colorscale
+            cmin=0,
+            cmax=200000,
+            colorbar=dict(title='S.Mises'),
+        ),
+        hoverinfo='text',
+        text=[f'S.Mises: {val:.2f}' for val in value]
+    )
+    type_trace_list = []
+    for node_type_value in torch.unique(node_type).tolist():
+        if node_type_value == 0:
+            continue
+        indices = (node_type == node_type_value)
+        type_trace = go.Scatter3d(
+            x=positions[indices, 0],
+            y=positions[indices, 1],
+            z=positions[indices, 2],
+            mode='markers',
+            marker=dict(
+                size=6,  # Adjust the size of the circle
+                color='rgba(0, 0, 0, 0)',  # Transparent fill
+                line=dict(width=5, color=cmap[node_type_value]),  # Circle border
+            ),
+        )
+        type_trace_list.append(type_trace)
+
+    layout = go.Layout(
+        scene=dict(
+            xaxis=dict(title='X', range=x_limit),
+            yaxis=dict(title='Y', range=y_limit),
+            zaxis=dict(title='Z', range=z_limit),
+            aspectmode='cube',
+            camera=dict(eye=dict(x=1.2, y=1.2, z=0.75)),
+            )
+    )
+    # Create the figure
+    fig = go.Figure(data=type_trace_list + [node_trace], layout=layout)
+    # Save the figure to a file (replace 'trajectory_snapshot.png' with your desired file name and format)
+    fig.write_image(path + f'/frame{snapshot:03d}.png', width=1000 * 2, height=800 * 2, scale=2)
+
+
+def make_video(image_folder):
+    # Output video file (change the extension to '.mp4' for MP4 format)
+    video_name = image_folder + '/trajectory.mp4'
+    # Get the list of image files in the directory
+    images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
+    # Sort the images based on their filenames
+    images.sort()
+    # Set the frame width and height (adjust as needed)
+    frame_width = 1800
+    frame_height = 1500
+    # Define the codec and create a VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    video = cv2.VideoWriter(video_name, fourcc, 10, (frame_width, frame_height))
+    # Iterate over the images and write each frame to the video
+    for image in images:
+        img_path = os.path.join(image_folder, image)
+        frame = cv2.imread(img_path)
+        # Resize the image to match the frame dimensions
+        frame = cv2.resize(frame, (frame_width, frame_height))
+        # Write the frame to the video
+        video.write(frame)
+    # Release the video writer and close the OpenCV window
+    video.release()
+    cv2.destroyAllWindows()
+
+
+def process_trajectory(i, dataset):
+
+    path = Path(f'./outputs/trajectory{i}')
+    path.mkdir(exist_ok=True, parents=True)
+    dataset.change_file(i)
+    frame = -1
+
+    for graph in tqdm(DataLoader(dataset=dataset, batch_size=batch_size, num_workers=1)):
+        frame += 1
+        if frame % 5 != 0:
+             continue
+        graph = FaceToEdgeTethra().forward(graph)
+
+        make_plot_plotly(graph, frame, str(path))
+
+    make_video(str(path))
+
+
+if __name__ == '__main__':
+    # Set dataset
+    dataset_fpc = FPCdp_ROLLOUT(dataset_dir=dataset_dir, split='test')
+    # Number of threads
+    num_threads = 8
+    # Your original range
+    trajectory_range = range(0, 100, 10)
+    parameters_threads = [deepcopy(dataset_fpc) for _ in range(len(trajectory_range))]
+    # Set threads
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        executor.map(process_trajectory, trajectory_range, parameters_threads)
+
+    # directory_path = Path("./output")
+    # folders = get_folder_names(directory_path)
+    # for folder in folders:
+    #     # Replace with the actual path to your directory
+    #     make_video(str(folder))
+

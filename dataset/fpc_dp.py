@@ -134,7 +134,7 @@ class FPCBase():
                 if k in ["node_type", "cells"]:
                     r = r.astype(np.int32)
             datas.append(r)
-        # datas.append(np.array([self.time_iterval * selected_frame], dtype=np.float32))
+
         g = FPCBase.datas_to_graph(datas, self.data_keys)
   
         return g
@@ -181,12 +181,15 @@ class FPCdp_ROLLOUT(IterableDataset):
         assert os.path.isfile(dataset_dir), '%s not exist' % dataset_dir
         self.file_handle = h5py.File(dataset_dir, "r")
         self.data_keys = ("mesh_pos", "world_pos", "stress", "node_type", "cells")
-        self.time_iterval = 0.01
+        self.time_iterval = 1
         self.load_dataset()
 
     def load_dataset(self):
         datasets = list(self.file_handle.keys())
         self.datasets = datasets
+
+    def __len__(self):
+        return len(self.datasets)
 
     def change_file(self, file_index):
         
@@ -197,7 +200,7 @@ class FPCdp_ROLLOUT(IterableDataset):
         self.edge_index = None
 
     def __next__(self):
-        if self.cur_tragecity_index==(self.cur_targecity_length - 1):
+        if self.cur_tragecity_index == (self.cur_targecity_length - 1):
             raise StopIteration
 
         data = self.cur_tra
@@ -212,11 +215,9 @@ class FPCdp_ROLLOUT(IterableDataset):
                 if k in ["node_type", "cells"]:
                     r = r.astype(np.int32)
             datas.append(r)
-        datas.append(np.array([self.time_iterval * selected_frame], dtype=np.float32))
 
         self.cur_tragecity_index += 1
         g = FPCBase.datas_to_graph(datas, self.data_keys)
-        # self.edge_index = g.edge_index
         return g
 
     def __iter__(self):
