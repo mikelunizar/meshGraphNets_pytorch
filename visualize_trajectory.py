@@ -35,40 +35,40 @@ def make_plot_plotly(graph, snapshot, path):
     node_type = graph.x[:, 0]
     value = graph.x[:, -1]
     # Node type color map
-    cmap = {1: 'red', 3: 'black'}
+    cmap = {1: 'blue', 3: 'black'}
     # Create a 3D scatter plot for nodes with circles and contours
-    node_trace = go.Scatter3d(
-        x=positions[:, 0],
-        y=positions[:, 1],
-        z=positions[:, 2],
-        mode='markers',
-        marker=dict(
-            size=5,
-            color=value,
-            colorscale='Viridis',  # You can choose a different colorscale
-            cmin=0,
-            cmax=200000,
-            colorbar=dict(title='S.Mises'),
-        ),
-        hoverinfo='text',
-        text=[f'S.Mises: {val:.2f}' for val in value]
-    )
+
     type_trace_list = []
     for node_type_value in torch.unique(node_type).tolist():
         if node_type_value == 0:
-            continue
-        indices = (node_type == node_type_value)
-        type_trace = go.Scatter3d(
-            x=positions[indices, 0],
-            y=positions[indices, 1],
-            z=positions[indices, 2],
-            mode='markers',
-            marker=dict(
-                size=6,  # Adjust the size of the circle
-                color='rgba(0, 0, 0, 0)',  # Transparent fill
-                line=dict(width=5, color=cmap[node_type_value]),  # Circle border
-            ),
-        )
+            type_trace = go.Scatter3d(
+                x=positions[:, 0],
+                y=positions[:, 1],
+                z=positions[:, 2],
+                mode='markers',
+                marker=dict(
+                    size=5,
+                    color=value,
+                    colorscale='YlOrRd',  # You can choose a different colorscale
+                    cmin=0,
+                    cmax=120000,
+                    colorbar=dict(title='S.Mises'),
+                ),
+                hoverinfo='text',
+                text=[f'S.Mises: {val:.2f}' for val in value]
+            )
+        else:
+            indices = (node_type == node_type_value)
+            type_trace = go.Scatter3d(
+                x=positions[indices, 0],
+                y=positions[indices, 1],
+                z=positions[indices, 2],
+                mode='markers',
+                marker=dict(
+                    size=5,  # Adjust the size of the circle
+                    color=cmap[node_type_value],  # Transparent fill
+                ),
+            )
         type_trace_list.append(type_trace)
 
     layout = go.Layout(
@@ -81,7 +81,7 @@ def make_plot_plotly(graph, snapshot, path):
             )
     )
     # Create the figure
-    fig = go.Figure(data=type_trace_list + [node_trace], layout=layout)
+    fig = go.Figure(data=type_trace_list, layout=layout)
     # Save the figure to a file (replace 'trajectory_snapshot.png' with your desired file name and format)
     fig.write_image(path + f'/frame{snapshot:03d}.png', width=1000 * 2, height=800 * 2, scale=2)
 
