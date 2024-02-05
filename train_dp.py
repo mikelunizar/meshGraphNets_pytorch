@@ -34,11 +34,12 @@ def train(model: Simulator, dataloader, optimizer):
         graph = FaceToEdgeTethra().forward(graph)
         graph = transformer(graph)
         #graph = graph.cuda()
-        plot_graph(graph)
 
-        #node_type = graph.x[:, 0] #"node_type, cur_v, pressure, time"
+        node_type = graph.x[:, 0]  # "node_type, mesh_pos, world_pos, stress"
+        # ADD NOISE
         #velocity_sequence_noise = get_velocity_noise(graph, noise_std=noise_std, device=device)
-        predicted_acc, target_acc = model(graph)#, velocity_sequence_noise)
+        predicted_acc, target_acc = model(graph)
+        # Mask data to not backpropagate no error
         mask = torch.logical_or(node_type==NodeType.NORMAL, node_type==NodeType.OUTFLOW)
         
         errors = ((predicted_acc - target_acc)**2)[mask]
@@ -72,13 +73,14 @@ class FaceToEdgeTethra():
             num_edges_element = face.shape[0]
             list_elements = [i for i in range(num_edges_element)]
             # Using nested loops to generate all pairs
-            all_combinations = [(x, y) for x in list_elements for y in list_elements if x != y]
+            all_combinations = sorted([(x, y) for x in list_elements for y in list_elements if x != y])
+            all_combinations = set(all_combinations)
             edge_index = []
             for (x, y) in all_combinations:
-                single_combination_edge_index = torch.cat((face[x,:].unsqueeze(0), face[y, :].unsqueeze(0)), dim=0)
+                single_combination_edge_index = torch.cat((face[x, :].unsqueeze(0), face[y, :].unsqueeze(0)), dim=0)
                 edge_index.append(single_combination_edge_index)
             edge_index = torch.cat(edge_index, dim=-1)
-            #edge_index = to_undirected(edge_index, num_nodes=data.num_nodes)
+            edge_index = to_undirected(edge_index, num_nodes=data.x.shape[0])
 
             data.edge_index = edge_index
             if self.remove_faces:

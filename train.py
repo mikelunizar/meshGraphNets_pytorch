@@ -6,6 +6,7 @@ import time
 from utils.utils import NodeType
 from torch_geometric.loader import DataLoader
 import torch_geometric.transforms as T
+import torch
 
 dataset_dir = "./data/cylinder_flow"
 batch_size = 1
@@ -26,39 +27,6 @@ from torch_geometric.data.datapipes import functional_transform
 from torch_geometric.transforms import BaseTransform
 from torch_geometric.utils import to_undirected
 
-
-@functional_transform('face_to_edge_tethra')
-class FaceToEdgeTethra(BaseTransform):
-    r"""Converts mesh faces :obj:`[3, num_faces]` to edge indices
-    :obj:`[2, num_edges]` (functional name: :obj:`face_to_edge`).
-
-    Args:
-        remove_faces (bool, optional): If set to :obj:`False`, the face tensor
-            will not be removed.
-    """
-    def __init__(self, remove_faces: bool = True):
-        self.remove_faces = remove_faces
-
-    def forward(self, data: Data) -> Data:
-        if hasattr(data, 'face'):
-            face = data.face
-            num_edges_element = face.shape[0]
-            list_elements = [i for i in range(num_edges_element)]
-            # Using nested loops to generate all pairs
-            all_combinations = [(x, y) for x in list_elements for y in list_elements if x != y]
-            edge_index = []
-            for (x, y) in all_combinations:
-                single_combination_edge_index = torch.cat((face[x,:], face[y, :]), dim=0)
-                edge_index.append(single_combination_edge_index)
-            edge_index = tensor.torch(edge_index)
-            edge_index = to_undirected(edge_index, num_nodes=data.num_nodes)
-
-            data.edge_index = edge_index
-            if self.remove_faces:
-                data.face = None
-
-        return data
-    
 
 def train(model:Simulator, dataloader, optimizer):
 
@@ -89,5 +57,5 @@ if __name__ == '__main__':
 
     dataset_fpc = FPC(dataset_dir=dataset_dir, split='train', max_epochs=50)
     train_loader = DataLoader(dataset=dataset_fpc, batch_size=batch_size, num_workers=10)
-    transformer = T.Compose([FaceToEdgeTethra(), T.Cartesian(norm=False), T.Distance(norm=False)])
+    transformer = T.Compose([T.FaceToEdge(), T.Cartesian(norm=False), T.Distance(norm=False)])
     train(simulator, train_loader, optimizer)

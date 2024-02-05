@@ -1,6 +1,8 @@
 from dataset import FPCdp, FPCdp_ROLLOUT
 
 from torch_geometric.loader import DataLoader
+import torch_geometric.transforms as T
+from train_dp import FaceToEdgeTethra
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -10,30 +12,31 @@ from tqdm import tqdm
 import cv2
 from copy import deepcopy
 import plotly.graph_objects as go
+from plotly.offline import plot
+
+import matplotlib.pyplot as plt
 
 import torch
 
 
-from train_dp import FaceToEdgeTethra
-
-
 dataset_dir = "./data/deforming_plate"
 batch_size = 1
-noise_std=2e-2
+noise_std = 2e-2
 
 print_batch = 10
 save_batch = 200
 
 
-def make_plot_plotly(graph, snapshot, path):
+def make_plot_plotly3D(x, snapshot, path=None, edge_index=None):
     # Set your desired axis limits
     x_limit = [-0.1, 0.3]
     y_limit = [-0.1, 0.5]
     z_limit = [-0.1, 0.3]
     # Sample data for demonstration
-    positions = graph.x[:, 4:7]
-    node_type = graph.x[:, 0]
-    value = graph.x[:, -1]
+    positions = x[:, 4:7]
+    node_type = x[:, 0]
+    value = x[:, -1]
+    label_node = torch.arange(0, len(node_type))
     # Node type color map
     cmap = {1: 'blue', 3: 'black'}
     # Create a 3D scatter plot for nodes with circles and contours
@@ -45,7 +48,8 @@ def make_plot_plotly(graph, snapshot, path):
                 x=positions[:, 0],
                 y=positions[:, 1],
                 z=positions[:, 2],
-                mode='markers',
+                mode='markers+text',
+                text=label_node,
                 marker=dict(
                     size=5,
                     color=value,
@@ -55,7 +59,7 @@ def make_plot_plotly(graph, snapshot, path):
                     colorbar=dict(title='S.Mises'),
                 ),
                 hoverinfo='text',
-                text=[f'S.Mises: {val:.2f}' for val in value]
+                #text=[f'S.Mises: {val:.2f}' for val in value]
             )
         else:
             indices = (node_type == node_type_value)
@@ -71,6 +75,27 @@ def make_plot_plotly(graph, snapshot, path):
             )
         type_trace_list.append(type_trace)
 
+    if edge_index is not None:
+        source = edge_index[0]
+        target = edge_index[1]
+        # Extract coordinates for source and target nodes
+        source_coordinates = [positions[i] for i in source]
+        target_coordinates = [positions[i] for i in target]
+        # Flatten the coordinate lists for Scatter3d
+        x = [coord[0] for sublist in zip(source_coordinates, target_coordinates) for coord in sublist]
+        y = [coord[1] for sublist in zip(source_coordinates, target_coordinates) for coord in sublist]
+        z = [coord[2] for sublist in zip(source_coordinates, target_coordinates) for coord in sublist]
+
+        # Create scatter plot for edges
+        scatter_edges = go.Scatter3d(
+            x=x,
+            y=y,
+            z=z,
+            mode='lines',
+            line=dict(color='gray', width=1),
+            )
+        type_trace_list.append(scatter_edges)
+
     layout = go.Layout(
         scene=dict(
             xaxis=dict(title='X', range=x_limit),
@@ -82,8 +107,12 @@ def make_plot_plotly(graph, snapshot, path):
     )
     # Create the figure
     fig = go.Figure(data=type_trace_list, layout=layout)
-    # Save the figure to a file (replace 'trajectory_snapshot.png' with your desired file name and format)
-    fig.write_image(path + f'/frame{snapshot:03d}.png', width=1000 * 2, height=800 * 2, scale=2)
+
+    if path is not None:
+        # Save the figure to a file (replace 'trajectory_snapshot.png' with your desired file name and format)
+        fig.write_image(path + f'/frame{snapshot:03d}.png', width=1000 * 2, height=800 * 2, scale=2)
+    else:
+        plot(fig)
 
 
 def make_video(image_folder):
@@ -125,26 +154,42 @@ def process_trajectory(i, dataset):
              continue
         graph = FaceToEdgeTethra().forward(graph)
 
-        make_plot_plotly(graph, frame, str(path))
+        make_plot_plotly3D(graph.x, frame, path=str(path), edge_index=graph.edge_index)
 
     make_video(str(path))
 
 
 if __name__ == '__main__':
-    # Set dataset
+
+    transformer = T.Compose([T.Cartesian(norm=False), T.Distance(norm=False)])
+
+    # # Set dataset
+    # path = Path(f'./outputs/trajectory3')
+    # dataset = FPCdp(dataset_dir=dataset_dir, split='test', max_epochs=100)
+    # loader = DataLoader(dataset=dataset, batch_size=batch_size, num_workers=1, shuffle=False)
+    #
+    # for batch_index, graph in enumerate(loader):
+    #     graph = FaceToEdgeTethra().forward(graph)
+    #     graph = transformer(graph)
+    #     x = graph.x
+    #     edges = graph.edge_index
+    #     make_plot_plotly3D(x, 0, edge_index=edges)
+    #     break
+
+
+    ####################################
+    ####################################
+    ####################################
+    # UNCOMMENT TO VISUALIZE TRAJECTORY
+    # # Set dataset
     dataset_fpc = FPCdp_ROLLOUT(dataset_dir=dataset_dir, split='test')
     # Number of threads
     num_threads = 8
     # Your original range
-    trajectory_range = range(0, 100, 10)
+    trajectory_range = [3] #range(0, 100, 10)
     parameters_threads = [deepcopy(dataset_fpc) for _ in range(len(trajectory_range))]
     # Set threads
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         executor.map(process_trajectory, trajectory_range, parameters_threads)
 
-    # directory_path = Path("./output")
-    # folders = get_folder_names(directory_path)
-    # for folder in folders:
-    #     # Replace with the actual path to your directory
-    #     make_video(str(folder))
 
