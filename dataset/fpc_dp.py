@@ -100,10 +100,11 @@ class FPCBase():
         world_crds = torch.as_tensor(datas[metadata.index('world_pos')], dtype=torch.float)
         stress = torch.as_tensor(datas[metadata.index('stress')], dtype=torch.float)
 
-        x = torch.cat((node_type, mesh_crds[0], world_crds[0], stress[0]), dim=-1)
-        y = torch.cat((mesh_crds[1], world_crds[1], stress[1]), dim=-1)
+        x = torch.cat((world_crds[0], stress[0]), dim=-1)
+        y = torch.cat((world_crds[1], stress[1]), dim=-1)
 
-        g = Data(x=x, y=y,face=face, pos=mesh_crds[0])
+        g = Data(x=x, y=y, face=face, n=node_type, pos=world_crds[0])
+        
         return g
 
     def __next__(self):
@@ -127,7 +128,7 @@ class FPCBase():
 
         datas = []
         for k in self.data_keys:
-            if k in ["mesh_pos", "world_pos", 'stress']:
+            if k in ["world_pos", 'stress']:
                 r = np.array((data[k][selected_frame], data[k][selected_frame+1]), dtype=np.float32)
             else:
                 r = data[k][selected_frame]
@@ -208,7 +209,7 @@ class FPCdp_ROLLOUT(IterableDataset):
 
         datas = []
         for k in self.data_keys:
-            if k in ["mesh_pos", "world_pos", 'stress']:
+            if k in ["world_pos", 'stress']:
                 r = np.array((data[k][selected_frame], data[k][selected_frame + 1]), dtype=np.float32)
             else:
                 r = data[k][selected_frame]

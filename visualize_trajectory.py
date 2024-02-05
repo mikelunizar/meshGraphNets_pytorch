@@ -27,14 +27,14 @@ print_batch = 10
 save_batch = 200
 
 
-def make_plot_plotly3D(x, snapshot, path=None, edge_index=None):
+def make_plot_plotly3D(x, n , snapshot, path=None, edge_index=None):
     # Set your desired axis limits
     x_limit = [-0.1, 0.3]
     y_limit = [-0.1, 0.5]
     z_limit = [-0.1, 0.3]
     # Sample data for demonstration
-    positions = x[:, 4:7]
-    node_type = x[:, 0]
+    positions = x[:,:-1]
+    node_type = n[:, 0]
     value = x[:, -1]
     label_node = torch.arange(0, len(node_type))
     # Node type color map
@@ -78,6 +78,26 @@ def make_plot_plotly3D(x, snapshot, path=None, edge_index=None):
     if edge_index is not None:
         source = edge_index[0]
         target = edge_index[1]
+        # # TESTING
+        # at = torch.argwhere(node_type == 1).squeeze()
+        # for i in at:
+        #     index_i = torch.argwhere(source == i)
+        #     wrong_edge = torch.argwhere(target[index_i] > torch.max(at))
+        #     if len(wrong_edge) > 0:
+        #         print(target[index_i])
+        #         raise ValueError
+        # print('Now object!')
+        # at = torch.argwhere(node_type != 1).squeeze()
+        # negative = torch.argwhere(positions[at,:] < -0.1)
+        # if len(negative) > 0:
+        #     print('Wrong')
+        # for i in at:
+        #     index_i = torch.argwhere(source == i)
+        #     wrong_edge = torch.argwhere(target[index_i] <= torch.min(at))
+        #     if len(wrong_edge) > 0:
+        #         target[index_i]
+        #         raise ValueError
+            
         # Extract coordinates for source and target nodes
         source_coordinates = [positions[i] for i in source]
         target_coordinates = [positions[i] for i in target]
@@ -153,8 +173,10 @@ def process_trajectory(i, dataset):
         if frame % 5 != 0:
              continue
         graph = FaceToEdgeTethra().forward(graph)
+        #path = str(path),
 
-        make_plot_plotly3D(graph.x, frame, path=str(path), edge_index=graph.edge_index)
+        make_plot_plotly3D(graph.x, graph.n, frame, path=None, edge_index=graph.edge_index)
+        break
 
     make_video(str(path))
 
@@ -163,25 +185,24 @@ if __name__ == '__main__':
 
     transformer = T.Compose([T.Cartesian(norm=False), T.Distance(norm=False)])
 
-    # # Set dataset
+    # # # Set dataset
     # path = Path(f'./outputs/trajectory3')
-    # dataset = FPCdp(dataset_dir=dataset_dir, split='test', max_epochs=100)
+    # dataset = FPCdp_ROLLOUT(dataset_dir=dataset_dir, split='test')
+    # idx = 0
+    # dataset.change_file(idx)
     # loader = DataLoader(dataset=dataset, batch_size=batch_size, num_workers=1, shuffle=False)
-    #
-    # for batch_index, graph in enumerate(loader):
+    # for graph in loader:
     #     graph = FaceToEdgeTethra().forward(graph)
     #     graph = transformer(graph)
-    #     x = graph.x
-    #     edges = graph.edge_index
-    #     make_plot_plotly3D(x, 0, edge_index=edges)
+    #     make_plot_plotly3D(graph.x, graph.n , 0, edge_index=graph.edge_index)
     #     break
 
 
     ####################################
     ####################################
     ####################################
-    # UNCOMMENT TO VISUALIZE TRAJECTORY
-    # # Set dataset
+    # # UNCOMMENT TO VISUALIZE TRAJECTORY
+    # Set dataset
     dataset_fpc = FPCdp_ROLLOUT(dataset_dir=dataset_dir, split='test')
     # Number of threads
     num_threads = 8

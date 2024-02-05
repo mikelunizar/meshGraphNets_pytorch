@@ -23,7 +23,7 @@ class Encoder(nn.Module):
     
     def forward(self, graph):
 
-        node_attr, _, edge_attr, _ = decompose_graph(graph)
+        node_attr, _, edge_attr = decompose_graph(graph)
         node_ = self.nb_encoder(node_attr)
         edge_ = self.eb_encoder(edge_attr)
         
@@ -80,7 +80,7 @@ class EncoderProcesserDecoder(nn.Module):
             processer_list.append(GnBlock(hidden_size=hidden_size))
         self.processer_list = nn.ModuleList(processer_list)
         
-        self.decoder = Decoder(hidden_size=hidden_size, output_size=2)
+        self.decoder = Decoder(hidden_size=hidden_size, output_size=3)
 
     def forward(self, graph):
 

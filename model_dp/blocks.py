@@ -17,7 +17,7 @@ class EdgeBlock(nn.Module):
 
     def forward(self, graph):
 
-        node_attr, edge_index, edge_attr, _ = decompose_graph(graph)
+        node_attr, edge_index, edge_attr = decompose_graph(graph)
         senders_idx, receivers_idx = edge_index
         edges_to_collect = []
 
