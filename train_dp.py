@@ -2,7 +2,7 @@ from dataset import FPCdp, FPCdp_ROLLOUT
 from model_dp.simulator import Simulator
 import torch
 from utils.noise import get_velocity_noise
-from model_dp.transforms import FaceToEdgeTethra, RadiusGraphMesh, ContactDistance
+from model_dp.transforms import FaceToEdgeTethra, RadiusGraphMesh, ContactDistance, MeshDistance
 from utils.utils import NodeTypeDP
 from torch_geometric.loader import DataLoader
 import torch_geometric.transforms as T
@@ -51,13 +51,14 @@ def train(model: Simulator, dataloader, optimizer):
 
 
 
-
 if __name__ == '__main__':
+
+    print(simulator)
 
     dataset_fpc = FPCdp(dataset_dir=dataset_dir, split='train', max_epochs=50)
     train_loader = DataLoader(dataset=dataset_fpc, batch_size=batch_size, num_workers=1)
     transformer = T.Compose([FaceToEdgeTethra(), T.Cartesian(norm=False), T.Distance(norm=False), 
-                             RadiusGraphMesh(r=0.0003), ContactDistance(norm=False)])
+                             RadiusGraphMesh(r=0.03), MeshDistance(norm=False), ContactDistance(norm=False)])
     train(simulator, train_loader, optimizer)
 
 

@@ -11,7 +11,7 @@ from model_dp.simulator import Simulator
 from tqdm import tqdm
 import os
 
-from model_dp.transforms import FaceToEdgeTethra, RadiusGraphMesh, ContactDistance
+from model_dp.transforms import FaceToEdgeTethra, RadiusGraphMesh, ContactDistance, MeshDistance
 
 
 parser = argparse.ArgumentParser(description='Implementation of MeshGraphNets')
@@ -90,15 +90,15 @@ def rollout(model, dataloader, rollout_index=1):
 
 if __name__ == '__main__':
 
-    simulator = Simulator(message_passing_num=15, node_input_size=4, edge_input_size=4, device=device)
+    simulator = Simulator(message_passing_num=15, node_input_size=7, edge_input_size=4, device=device)
     simulator.load_checkpoint()
     simulator.eval()
 
     dataset_dir = "./data/deforming_plate"
-    dataset = FPCdp_ROLLOUT(dataset_dir=dataset_dir, split='test')
+    dataset = FPCdp_ROLLOUT(dataset_dir=dataset_dir, split='valid')
 
-    transformer = transformer = T.Compose([FaceToEdgeTethra(), T.Cartesian(norm=False), T.Distance(norm=False), 
-                             RadiusGraphMesh(r=0.0003), ContactDistance(norm=False)])
+    transformer = T.Compose([FaceToEdgeTethra(), T.Cartesian(norm=False), T.Distance(norm=False), 
+                             RadiusGraphMesh(r=0.0003), MeshDistance(norm=False), ContactDistance(norm=False)])
     
     test_loader = DataLoader(dataset=dataset, batch_size=1)
 

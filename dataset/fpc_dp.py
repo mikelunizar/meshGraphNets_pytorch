@@ -103,7 +103,7 @@ class FPCBase():
         x = torch.cat((world_crds[0], stress[0]), dim=-1)
         y = torch.cat((world_crds[1], stress[1]), dim=-1)
 
-        g = Data(x=x, y=y, face=face, n=node_type, pos=world_crds[0])
+        g = Data(x=x, y=y, face=face, n=node_type, pos=world_crds[0], mesh_pos=mesh_crds)
         
         return g
 

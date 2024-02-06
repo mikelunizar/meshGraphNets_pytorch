@@ -6,8 +6,8 @@ from torch_geometric.data import Data
 def build_mlp(in_size, hidden_size, out_size, lay_norm=True):
 
     module = nn.Sequential(nn.Linear(in_size, hidden_size), nn.ReLU(), 
-                           nn.Linear(hidden_size, hidden_size), nn.ReLU(), 
-                           nn.Linear(hidden_size, hidden_size), nn.ReLU(), 
+                           #nn.Linear(hidden_size, hidden_size), nn.ReLU(), 
+                           #nn.Linear(hidden_size, hidden_size), nn.ReLU(), 
                            nn.Linear(hidden_size, out_size))
     if lay_norm: return nn.Sequential(module,  nn.LayerNorm(normalized_shape=out_size))
     return module
@@ -21,7 +21,7 @@ class Encoder(nn.Module):
                 hidden_size=128):
         super(Encoder, self).__init__()
 
-        self.emb_encoder = build_mlp(edge_input_size, hidden_size, hidden_size)
+        self.emb_encoder = build_mlp(edge_input_size * 2, hidden_size, hidden_size)
         self.ewb_encoder = build_mlp(edge_input_size, hidden_size, hidden_size)
 
         self.nb_encoder = build_mlp(node_input_size, hidden_size, hidden_size)
@@ -47,10 +47,13 @@ class GnBlock(nn.Module):
         eb_input_dim = 3 * hidden_size
         nb_input_dim = 3 * hidden_size
         nb_custom_func = build_mlp(nb_input_dim, hidden_size, hidden_size)
-        eb_custom_func = build_mlp(eb_input_dim, hidden_size, hidden_size)
+        ewb_custom_func = build_mlp(eb_input_dim, hidden_size, hidden_size)
+        emb_custom_func = build_mlp(eb_input_dim, hidden_size, hidden_size)
+
         
-        self.emb_module = EdgeMeshBlock(custom_func=eb_custom_func)
-        self.ewb_module = EdgeWorldBlock(custom_func=eb_custom_func)
+        
+        self.emb_module = EdgeMeshBlock(custom_func=emb_custom_func)
+        self.ewb_module = EdgeWorldBlock(custom_func=ewb_custom_func)
         self.nb_module = NodeBlock(custom_func=nb_custom_func)
 
     def forward(self, graph):

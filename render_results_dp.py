@@ -92,9 +92,9 @@ def plot3D_position_stress(data, n, step):
                 aspectmode='cube',
                 camera=dict(eye=dict(x=1.2, y=1.2, z=0.75)),
                 ),
-                title='Prediction\nTime @ %.2f s'%(step*0.01)
+                title='Prediction\nTime @ %.2f s'%(step*0.01),
+                legend=dict(x=-0.1, y=1.0, bgcolor='rgba(255, 255, 255, 0.5)')
         )
-
 
         # Create the figure
         fig = go.Figure(data=type_trace_list, layout=layout)
@@ -113,8 +113,9 @@ for index, file in enumerate(result_files):
 
     file_name = 'videos/output%d.mp4'%index
 
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')  # 保存视频的编码
-    out = cv2.VideoWriter(file_name, fourcc, 20.0, (1700,800))
+    #fourcc = cv2.VideoWriter_fourcc(*'XVID')  # 保存视频的编码
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(file_name, fourcc, 10.0, (1000, 800))
 
     r_t = result[0][:, 0]
 
@@ -132,9 +133,10 @@ for index, file in enumerate(result_files):
 
         fig = plot3D_position_stress(predicted, n, step)
 
-        fig.write_image(f'./frame.png', width=1000 * 2, height=800 * 2, scale=2)
+        fig.write_image(f'./frame.png', width=1000, height=800, scale=2)
 
         img = cv2.imread(f'./frame.png')
+        img = cv2.resize(img, (1000, 800))
         out.write(img)
 
 

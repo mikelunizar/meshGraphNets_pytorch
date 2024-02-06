@@ -7,6 +7,7 @@ from torch_geometric.utils import to_undirected
 
 from typing import Optional, Tuple
 
+from torch_cluster import radius
 
 
 @functional_transform('face_to_edge_thetra')
@@ -64,7 +65,7 @@ class RadiusGraphMesh(BaseTransform):
         self,
         r: float,
         loop: bool = False,
-        max_num_neighbors: int = 32,
+        max_num_neighbors: int = 512,
         flow: str = 'source_to_target',
         num_workers: int = 1,
     ):
@@ -76,9 +77,12 @@ class RadiusGraphMesh(BaseTransform):
 
     def forward(self, data: Data) -> Data:
 
+        indx_object = torch.argwhere(data.n != 1).squeeze()[:, 0]
+        indx_actuator = torch.argwhere(data.n == 1).squeeze()[:, 0]
+
         batch = data.batch if 'batch' in data else None
 
-        data.edge_world_index = torch_geometric.nn.radius_graph(
+        edge_world_index = torch_geometric.nn.radius_graph(
             data.pos,
             self.r,
             batch,
@@ -87,7 +91,18 @@ class RadiusGraphMesh(BaseTransform):
             flow=self.flow,
             num_workers=self.num_workers,
         )
+        actuator_object = torch.where(data.n == 1, 1, 0).squeeze()
+        src, dest = edge_world_index
+        mask = torch.logical_xor(actuator_object[src].squeeze(), actuator_object[dest].squeeze())
+        data.edge_world_index = edge_world_index[:, mask]
 
+        # object_graph, actuator_graph = data.x[indx_object, :-1], data.x[indx_actuator, :-1]
+        # if 'batch' in data:
+        #      batch_object, batch_actuator = data.batch[indx_object], data.batch[indx_actuator]
+        # else:
+        #     batch_object, batch_actuator = None, None
+
+        # data.edge_world_index = radius(x=object_graph, y=actuator_graph, r=self.r, batch_x=batch_object, batch_y=batch_actuator)
 
         return data
 
@@ -139,6 +154,63 @@ class ContactDistance(BaseTransform):
             dist = length * (dist / max_value) + self.interval[0]
 
         data.edge_world_attr = dist
+
+        return data
+
+    def __repr__(self) -> str:
+        return (f'{self.__class__.__name__}(norm={self.norm}, '
+                f'max_value={self.max})')
+    
+
+
+@functional_transform('mesh_distance')
+class MeshDistance(BaseTransform):
+    r"""Saves the Euclidean distance of linked nodes in its edge attributes
+    (functional name: :obj:`distance`). Each distance gets globally normalized
+    to a specified interval (:math:`[0, 1]` by default).
+
+    Args:
+        norm (bool, optional): If set to :obj:`False`, the output will not be
+            normalized. (default: :obj:`True`)
+        max_value (float, optional): If set and :obj:`norm=True`, normalization
+            will be performed based on this value instead of the maximum value
+            found in the data. (default: :obj:`None`)
+        cat (bool, optional): If set to :obj:`False`, all existing edge
+            attributes will be replaced. (default: :obj:`True`)
+        interval ((float, float), optional): A tuple specifying the lower and
+            upper bound for normalization. (default: :obj:`(0.0, 1.0)`)
+    """
+    def __init__(
+            self,
+            norm: bool = True,
+            max_value: Optional[float] = None,
+            cat: bool = True,
+            interval: Tuple[float, float] = (0.0, 1.0),
+    ):
+        self.norm = norm
+        self.max = max_value
+        self.cat = cat
+        self.interval = interval
+
+    def forward(self, data: Data) -> Data:
+        (row, col), pos, pseudo = data.edge_index, data.mesh_pos, data.edge_attr
+
+        cart_dist = pos[col] - pos[row]
+        dist_norm = torch.norm(cart_dist, p=2, dim=-1).view(-1, 1)
+        dist = torch.cat((cart_dist, dist_norm), dim=-1)
+
+
+        if self.norm and dist.numel() > 0:
+            max_value = dist.max() if self.max is None else self.max
+
+            length = self.interval[1] - self.interval[0]
+            dist = length * (dist / max_value) + self.interval[0]
+
+        if pseudo is not None and self.cat:
+            pseudo = pseudo.view(-1, 1) if pseudo.dim() == 1 else pseudo
+            data.edge_attr = torch.cat([pseudo, dist.type_as(pseudo)], dim=-1)
+        else:
+            data.edge_attr = dist
 
         return data
 

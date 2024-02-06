@@ -18,7 +18,9 @@ class Simulator(nn.Module):
         self.model = EncoderProcesserDecoder(message_passing_num=message_passing_num, node_input_size=node_input_size, edge_input_size=edge_input_size).to(device)
         self._output_normalizer = normalization.Normalizer(size=4, name='output_normalizer', device=device)
         self._node_normalizer = normalization.Normalizer(size=node_input_size, name='node_normalizer', device=device)
-        self._edge_normalizer = normalization.Normalizer(size=edge_input_size, name='edge_normalizer', device=device)
+        self._edge_attr_normalizer = normalization.Normalizer(size=edge_input_size * 2, name='edge_normalizer', device=device)
+        self._edge_world_normalizer = normalization.Normalizer(size=edge_input_size, name='edge_normalizer', device=device)
+
 
         print('Simulator model initialized')
 
@@ -29,13 +31,20 @@ class Simulator(nn.Module):
         velocity[torch.argwhere(node_type != 1).squeeze()] = 0.
         node_feature.append(velocity)
 
-        one_hot = torch.nn.functional.one_hot(node_type, self.node_input_size)
+        one_hot = torch.nn.functional.one_hot(node_type, 4)
         node_feature.append(one_hot)
 
         node_feats = torch.cat(node_feature, dim=1).float()
         attr = self._node_normalizer(node_feats, self.training)
 
         return attr
+    
+    def update_edge_attr(self, edge_attr:torch.Tensor, edge_world_attr:torch.Tensor):
+
+        edge_attr = self._edge_attr_normalizer(edge_attr, self.training)
+        edge_world_attr = self._edge_world_normalizer(edge_world_attr, self.training)
+
+        return edge_attr, edge_world_attr
 
     def position_to_velocity_and_stress(self, x, target):
 
@@ -53,8 +62,8 @@ class Simulator(nn.Module):
             target = graph.y
             velocity = target[:, :-1] - x[:, :-1]
             
-            node_attr = self.update_node_attr(node_type, velocity) # noised_frames = frames + velocity_sequence_noise
-            graph.x = node_attr
+            graph.x = self.update_node_attr(node_type, velocity) # noised_frames = frames + velocity_sequence_noise
+            graph.edge_attr, graph.edge_world_attr = self.update_edge_attr(graph.edge_attr, graph.edge_world_attr)
 
             predicted_vel_stress = self.model(graph)
 
@@ -68,8 +77,10 @@ class Simulator(nn.Module):
             node_type = graph.n
             x = graph.x
             target = graph.y
+
+            velocity = target[:, :-1] - x[:, :-1]
             
-            node_attr = self.update_node_attr(node_type) # noised_frames = frames + velocity_sequence_noise
+            node_attr = self.update_node_attr(node_type, velocity) # noised_frames = frames + velocity_sequence_noise
             graph.x = node_attr
 
             predicted_vel_stress = self.model(graph)
@@ -109,9 +120,11 @@ class Simulator(nn.Module):
         model = self.state_dict()
         _output_normalizer = self._output_normalizer.get_variable()
         _node_normalizer  = self._node_normalizer.get_variable()
-        _edge_normalizer = self._edge_normalizer.get_variable()
+        _edge_attr_normalizer = self._edge_attr_normalizer.get_variable()
+        _edge_world_normalizer = self._edge_world_normalizer.get_variable()
 
-        to_save = {'model':model, '_output_normalizer':_output_normalizer, '_node_normalizer':_node_normalizer}
+        to_save = {'model': model, '_output_normalizer': _output_normalizer, '_node_normalizer': _node_normalizer, 
+                   '_edge_attr_normalizer': _edge_attr_normalizer, '_edge_world_normalizer': _edge_world_normalizer}
 
         torch.save(to_save, savedir)
         print('Simulator model saved at %s'%savedir)
