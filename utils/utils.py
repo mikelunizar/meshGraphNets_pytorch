@@ -12,13 +12,18 @@ class NodeType(enum.IntEnum):
     WALL_BOUNDARY = 6
     SIZE = 9
 
+class NodeTypeDP(enum.IntEnum):
+    NORMAL = 0
+    ACTUATOR = 1
+    WALL_BOUNDARY = 3
+
 
 
 # see https://github.com/sungyongs/dpgn/blob/master/utils.py
 def decompose_graph(graph):
 
     # graph: torch_geometric.data.data.Data
-    return (graph.x, graph.edge_index, graph.edge_attr)
+    return (graph.x, graph.edge_index, graph.edge_attr, graph.edge_world_index, graph.edge_world_attr)
 
 # see https://github.com/sungyongs/dpgn/blob/master/utils.py
 def copy_geometric_data(graph):
@@ -26,9 +31,9 @@ def copy_geometric_data(graph):
     This function should be carefully used based on
     which keys in a given graph.
     """
-    node_attr, edge_index, edge_attr = decompose_graph(graph)
+    node_attr, edge_index, edge_attr, edge_world_index, edge_world_attr = decompose_graph(graph)
     
-    ret = Data(x=node_attr, edge_index=edge_index, edge_attr=edge_attr)
+    ret = Data(x=node_attr, edge_index=edge_index, edge_attr=edge_attr, edge_world_index=edge_world_index, edge_world_attr=edge_world_attr)
     
     return ret
 

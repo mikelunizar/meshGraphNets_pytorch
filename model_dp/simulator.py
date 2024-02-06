@@ -16,28 +16,32 @@ class Simulator(nn.Module):
         self.edge_input_size = edge_input_size
         self.model_dir = model_dir
         self.model = EncoderProcesserDecoder(message_passing_num=message_passing_num, node_input_size=node_input_size, edge_input_size=edge_input_size).to(device)
-        # self._output_normalizer = normalization.Normalizer(size=2, name='output_normalizer', device=device)
-        # self._node_normalizer = normalization.Normalizer(size=node_input_size, name='node_normalizer', device=device)
-        # self._edge_normalizer = normalization.Normalizer(size=edge_input_size, name='edge_normalizer', device=device)
+        self._output_normalizer = normalization.Normalizer(size=4, name='output_normalizer', device=device)
+        self._node_normalizer = normalization.Normalizer(size=node_input_size, name='node_normalizer', device=device)
+        self._edge_normalizer = normalization.Normalizer(size=edge_input_size, name='edge_normalizer', device=device)
 
         print('Simulator model initialized')
 
-    def update_node_attr(self, types:torch.Tensor):
+    def update_node_attr(self, types:torch.Tensor, velocity:torch.Tensor):
         node_feature = []
 
         node_type = torch.squeeze(types.long())
-        one_hot = torch.nn.functional.one_hot(node_type, 4)
+        velocity[torch.argwhere(node_type != 1).squeeze()] = 0.
+        node_feature.append(velocity)
+
+        one_hot = torch.nn.functional.one_hot(node_type, self.node_input_size)
         node_feature.append(one_hot)
+
         node_feats = torch.cat(node_feature, dim=1).float()
-        #attr = self._node_normalizer(node_feats, self.training)
-        attr = node_feats
+        attr = self._node_normalizer(node_feats, self.training)
 
         return attr
 
-    def velocity_to_accelation(self, noised_frames, next_velocity):
+    def position_to_velocity_and_stress(self, x, target):
 
-        acc_next = next_velocity - noised_frames
-        return acc_next
+        velocity_next = target[:,:-1] - x[:,:-1]
+        vel_stress_next = torch.cat((velocity_next, target[:,-2:-1]), dim=-1)
+        return vel_stress_next
 
 
     def forward(self, graph:Data):
@@ -45,32 +49,38 @@ class Simulator(nn.Module):
         if self.training:
             
             node_type = graph.n
+            x = graph.x
             target = graph.y
-
-            # noised_frames = frames + velocity_sequence_noise
-            node_attr = self.update_node_attr(node_type)
+            velocity = target[:, :-1] - x[:, :-1]
+            
+            node_attr = self.update_node_attr(node_type, velocity) # noised_frames = frames + velocity_sequence_noise
             graph.x = node_attr
 
-            predicted = self.model(graph)
+            predicted_vel_stress = self.model(graph)
 
-            target_acceration = self.velocity_to_accelation(noised_frames, target)
-            target_acceration_normalized = self._output_normalizer(target_acceration, self.training)
+            target_vel_stress = self.position_to_velocity_and_stress(x, target)
+            target_vel_stress_normalized = self._output_normalizer(target_vel_stress, self.training)
 
-            return predicted, target_acceration_normalized
+            return predicted_vel_stress, target_vel_stress_normalized
 
         else:
 
             node_type = graph.n
+            x = graph.x
             target = graph.y
-            node_attr = self.update_node_attr(node_type)
+            
+            node_attr = self.update_node_attr(node_type) # noised_frames = frames + velocity_sequence_noise
             graph.x = node_attr
 
-            predicted = self.model(graph)
+            predicted_vel_stress = self.model(graph)
 
-            velocity_update = self._output_normalizer.inverse(predicted)
-            predicted_velocity = frames + velocity_update
+            vel_stress_update = self._output_normalizer.inverse(predicted_vel_stress)
+            predicted_position = x[:, :-1] + vel_stress_update[:, :-1]
+            predicted_stress = vel_stress_update[:, -2:-1]
 
-            return predicted_velocity
+            predicted_position_stress = torch.cat((predicted_position, predicted_stress), dim=-1)
+
+            return predicted_position_stress
 
     def load_checkpoint(self, ckpdir=None):
         
@@ -99,7 +109,7 @@ class Simulator(nn.Module):
         model = self.state_dict()
         _output_normalizer = self._output_normalizer.get_variable()
         _node_normalizer  = self._node_normalizer.get_variable()
-        # _edge_normalizer = self._edge_normalizer.get_variable()
+        _edge_normalizer = self._edge_normalizer.get_variable()
 
         to_save = {'model':model, '_output_normalizer':_output_normalizer, '_node_normalizer':_node_normalizer}
 
