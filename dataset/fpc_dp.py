@@ -12,7 +12,7 @@ class FPCBase():
 
     def __init__(self, max_epochs=1, files=None):
 
-        self.open_tra_num = 10
+        self.open_tra_num = 1
         self.file_handle = files
         self.shuffle_file() # read dataset into h5py files
 
@@ -142,6 +142,10 @@ class FPCBase():
 
     def __iter__(self):
         return self
+    
+    # def __len__(self):
+    #     return len(self.file_handle) + self.tra_len
+
 
 
 class FPCdp(IterableDataset):
@@ -156,6 +160,8 @@ class FPCdp(IterableDataset):
         assert os.path.isfile(dataset_dir), '%s not exist' % dataset_dir
         self.file_handle = h5py.File(dataset_dir, "r")
         print('Dataset '+  self.dataset_dir + ' Initialized')
+        print(f' Number of samples loaded = {len(self.file_handle)}')
+
 
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
@@ -171,7 +177,12 @@ class FPCdp(IterableDataset):
         keys = list(self.file_handle.keys())
         keys = keys[iter_start:iter_end]
         files = {k: self.file_handle[k] for k in keys}
+        
         return FPCBase(max_epochs=self.max_epochs, files=files)
+    
+    def __len__(self):
+        return int(len(self.file_handle)*400)
+
 
 
 class FPCdp_ROLLOUT(IterableDataset):

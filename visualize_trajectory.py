@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 import torch
 
 
-dataset_dir = "./data/deforming_plate"
+dataset_dir = "./data/deforming_plate_debug"
 batch_size = 1
 noise_std = 2e-2
 
@@ -48,8 +48,8 @@ def make_plot_plotly3D(x, n , snapshot, path=None, edge_index=None):
                 x=positions[:, 0],
                 y=positions[:, 1],
                 z=positions[:, 2],
-                mode='markers+text',
-                text=label_node,
+                mode='markers',#+text',
+                #text=label_node,
                 marker=dict(
                     size=5,
                     color=value,
@@ -173,12 +173,11 @@ def process_trajectory(i, dataset):
         if frame % 5 != 0:
              continue
         graph = FaceToEdgeTethra().forward(graph)
-        #path = str(path),
 
-        make_plot_plotly3D(graph.x, graph.n, frame, path=None, edge_index=graph.edge_index)
-        break
+        make_plot_plotly3D(graph.x, graph.n, frame, path=path._str)
+        
 
-    make_video(str(path))
+    make_video(path._str)
 
 
 if __name__ == '__main__':
@@ -203,14 +202,18 @@ if __name__ == '__main__':
     ####################################
     # # UNCOMMENT TO VISUALIZE TRAJECTORY
     # Set dataset
-    dataset_fpc = FPCdp_ROLLOUT(dataset_dir=dataset_dir, split='test')
-    # Number of threads
-    num_threads = 8
-    # Your original range
-    trajectory_range = [3] #range(0, 100, 10)
-    parameters_threads = [deepcopy(dataset_fpc) for _ in range(len(trajectory_range))]
-    # Set threads
-    with ThreadPoolExecutor(max_workers=num_threads) as executor:
-        executor.map(process_trajectory, trajectory_range, parameters_threads)
+    dataset_fpc = FPCdp_ROLLOUT(dataset_dir=dataset_dir, split='train')
+
+
+    process_trajectory(3, dataset_fpc)
+
+    # # Number of threads
+    # num_threads = 1
+    # # Your original range
+    # trajectory_range = [3] #range(0, 100, 10)
+    # parameters_threads = [deepcopy(dataset_fpc) for _ in range(len(trajectory_range))]
+    # # Set threads
+    # with ThreadPoolExecutor(max_workers=num_threads) as executor:
+    #     executor.map(process_trajectory, trajectory_range, parameters_threads)
 
 

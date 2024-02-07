@@ -9,7 +9,7 @@ import torch_geometric.transforms as T
 
 
 dataset_dir = "./data/deforming_plate"
-batch_size = 1
+batch_size = 25
 noise_std=2e-2
 
 print_batch = 10
@@ -33,7 +33,7 @@ def train(model: Simulator, dataloader, optimizer):
         # ADD NOISE
         #velocity_sequence_noise = get_velocity_noise(graph, noise_std=noise_std, device=device)
         predicted_acc, target_acc = model(graph)
-        # Mask data to not backpropagate no error actuator
+        # Mask data to not backpropagate if actuator
         mask = torch.logical_or(node_type==NodeTypeDP.NORMAL, node_type==NodeTypeDP.WALL_BOUNDARY).squeeze()
         
         errors = ((predicted_acc - target_acc)**2)[mask]
@@ -55,8 +55,8 @@ if __name__ == '__main__':
 
     print(simulator)
 
-    dataset_fpc = FPCdp(dataset_dir=dataset_dir, split='train', max_epochs=50)
-    train_loader = DataLoader(dataset=dataset_fpc, batch_size=batch_size, num_workers=1)
+    dataset_fpc = FPCdp(dataset_dir=dataset_dir, split='valid', max_epochs=50)
+    train_loader = DataLoader(dataset=dataset_fpc, batch_size=batch_size, num_workers=4)
     transformer = T.Compose([FaceToEdgeTethra(), T.Cartesian(norm=False), T.Distance(norm=False), 
                              RadiusGraphMesh(r=0.03), MeshDistance(norm=False), ContactDistance(norm=False)])
     train(simulator, train_loader, optimizer)

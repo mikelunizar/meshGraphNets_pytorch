@@ -49,14 +49,13 @@ if __name__ == '__main__':
     tf.compat.v1.enable_eager_execution()
 
     tf_datasetPath='./data/deforming_plate'
-    os.makedirs('./data/deforming_plate/', exist_ok=True)
+    os.makedirs('./data/deforming_plate_debug/', exist_ok=True)
 
     for split in ['train', 'test', 'valid']:
         ds = load_dataset(tf_datasetPath, split)
-        save_path='./data/deforming_plate/'+ split  +'.h5'
+        save_path='./data/deforming_plate_debug/'+ split  +'.h5'
         f = h5py.File(save_path, "w")
         print(save_path)
-
         for index, d in enumerate(ds):
             mesh_pos = d['mesh_pos'].numpy()
             world_pos = d['world_pos'].numpy()
@@ -69,4 +68,6 @@ if __name__ == '__main__':
              g[k] = eval(k)
             
             print(index)
+            if index > 3:
+              break
         f.close()

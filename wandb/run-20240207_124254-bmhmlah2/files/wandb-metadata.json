@@ -1,0 +1,208 @@
+{
+    "os": "Linux-6.5.0-15-generic-x86_64-with-glibc2.35",
+    "python": "3.10.13",
+    "heartbeatAt": "2024-02-07T11:42:54.775735",
+    "startedAt": "2024-02-07T11:42:54.079200",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/home/mikel/Escritorio/meshGraphNets_pytorch/train_light.py",
+    "codePathLocal": "train_light.py",
+    "codePath": "train_light.py",
+    "git": {
+        "remote": "https://github.com/mikelunizar/meshGraphNets_pytorch.git",
+        "commit": "fd797c9b5795368764d198156989da7a413facca"
+    },
+    "email": "mikel.martinez@unizar.es",
+    "root": "/home/mikel/Escritorio/meshGraphNets_pytorch",
+    "host": "amb-mikel",
+    "username": "mikel",
+    "executable": "/home/mikel/miniconda3/envs/mesh/bin/python",
+    "cpu_count": 24,
+    "cpu_count_logical": 32,
+    "cpu_freq": {
+        "current": 5051.17803125,
+        "min": 800.0,
+        "max": 5087.5
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 5699.976,
+            "min": 800.0,
+            "max": 5700.0
+        },
+        {
+            "current": 5685.75,
+            "min": 800.0,
+            "max": 5700.0
+        },
+        {
+            "current": 5700.0,
+            "min": 800.0,
+            "max": 5700.0
+        },
+        {
+            "current": 5700.0,
+            "min": 800.0,
+            "max": 5700.0
+        },
+        {
+            "current": 5699.828,
+            "min": 800.0,
+            "max": 5700.0
+        },
+        {
+            "current": 5686.774,
+            "min": 800.0,
+            "max": 5700.0
+        },
+        {
+            "current": 5700.0,
+            "min": 800.0,
+            "max": 5700.0
+        },
+        {
+            "current": 5712.837,
+            "min": 800.0,
+            "max": 5700.0
+        },
+        {
+            "current": 5700.0,
+            "min": 800.0,
+            "max": 6000.0
+        },
+        {
+            "current": 5692.71,
+            "min": 800.0,
+            "max": 6000.0
+        },
+        {
+            "current": 5700.0,
+            "min": 800.0,
+            "max": 6000.0
+        },
+        {
+            "current": 5676.25,
+            "min": 800.0,
+            "max": 6000.0
+        },
+        {
+            "current": 5700.0,
+            "min": 800.0,
+            "max": 5700.0
+        },
+        {
+            "current": 5700.0,
+            "min": 800.0,
+            "max": 5700.0
+        },
+        {
+            "current": 5700.0,
+            "min": 800.0,
+            "max": 5700.0
+        },
+        {
+            "current": 5700.0,
+            "min": 800.0,
+            "max": 5700.0
+        },
+        {
+            "current": 4400.837,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4400.0,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4400.19,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4400.107,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4409.842,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4397.361,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4415.54,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4413.274,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4398.047,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4400.008,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4386.59,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4372.708,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4385.862,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4395.353,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4412.457,
+            "min": 800.0,
+            "max": 4400.0
+        },
+        {
+            "current": 4406.818,
+            "min": 800.0,
+            "max": 4400.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 1832.2072448730469,
+            "used": 651.3069458007812
+        }
+    },
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 4090",
+            "memory_total": 25757220864
+        }
+    ],
+    "memory": {
+        "total": 62.55253982543945
+    }
+}

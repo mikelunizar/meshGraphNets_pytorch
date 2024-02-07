@@ -78,8 +78,8 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.decode_module = build_mlp(hidden_size, hidden_size, output_size, lay_norm=False)
 
-    def forward(self, graph):
-        return self.decode_module(graph.x)
+    def forward(self, graph, mask):
+        return self.decode_module(graph.x[mask])
 
 
 class EncoderProcesserDecoder(nn.Module):
@@ -97,12 +97,13 @@ class EncoderProcesserDecoder(nn.Module):
         
         self.decoder = Decoder(hidden_size=hidden_size, output_size=4)
 
-    def forward(self, graph):
+    def forward(self, graph, mask):
 
         graph= self.encoder(graph)
         for model in self.processer_list:
             graph = model(graph)
-        decoded = self.decoder(graph)
+        
+        decoded = self.decoder(graph, mask)
 
         return decoded
 

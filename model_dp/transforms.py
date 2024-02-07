@@ -77,9 +77,6 @@ class RadiusGraphMesh(BaseTransform):
 
     def forward(self, data: Data) -> Data:
 
-        indx_object = torch.argwhere(data.n != 1).squeeze()[:, 0]
-        indx_actuator = torch.argwhere(data.n == 1).squeeze()[:, 0]
-
         batch = data.batch if 'batch' in data else None
 
         edge_world_index = torch_geometric.nn.radius_graph(
@@ -96,13 +93,6 @@ class RadiusGraphMesh(BaseTransform):
         mask = torch.logical_xor(actuator_object[src].squeeze(), actuator_object[dest].squeeze())
         data.edge_world_index = edge_world_index[:, mask]
 
-        # object_graph, actuator_graph = data.x[indx_object, :-1], data.x[indx_actuator, :-1]
-        # if 'batch' in data:
-        #      batch_object, batch_actuator = data.batch[indx_object], data.batch[indx_actuator]
-        # else:
-        #     batch_object, batch_actuator = None, None
-
-        # data.edge_world_index = radius(x=object_graph, y=actuator_graph, r=self.r, batch_x=batch_object, batch_y=batch_actuator)
 
         return data
 
