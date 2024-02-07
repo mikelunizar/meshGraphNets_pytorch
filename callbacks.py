@@ -13,7 +13,7 @@ from render_results_dp import plot3D_position_stress
 
 
 class RolloutCallback(pl.Callback):
-    def __ini__(self, rollout_loader, trajectory, transforms, **kwargs):
+    def __init__(self, rollout_loader, trajectory, transforms, **kwargs):
         super().__init__(**kwargs)
 
         loader_dict = {sample.step: sample for sample in rollout_loader if sample.num == trajectory}
