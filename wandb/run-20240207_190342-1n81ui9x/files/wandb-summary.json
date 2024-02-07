@@ -1,0 +1,1 @@
+{"rollout": {"_type": "video-file", "sha256": "48424e5f3de1d35c8d61e24e43f45652c915baf1eb1188fdf10b8a8d972df5c6", "size": 288716, "path": "media/videos/rollout_0_48424e5f3de1d35c8d61.mp4"}, "_timestamp": 1707329302.5917296, "_runtime": 280.318975687027, "_step": 2, "val_loss": 11407513.0, "epoch": 0, "trainer/global_step": 0, "train_loss": 0.6432830095291138}

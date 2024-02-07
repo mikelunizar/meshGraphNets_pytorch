@@ -27,7 +27,10 @@ class Simulator(pl.LightningModule):
 
         print('Simulator model initialized')
 
-    def forward(self, graph, mask):
+    def forward(self, graph, mask=None):
+
+        if mask is None:
+            mask = torch.zeros(graph.n.shape[0]).long()
 
         if self.training:
 

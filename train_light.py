@@ -9,13 +9,13 @@ from pytorch_lightning.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
 
 from model_dp.simulator_lightning import Simulator
+from model_dp.callbacks import RolloutCallback
 from model_dp.transforms import FaceToEdgeTethra, RadiusGraphMesh, ContactDistance, MeshDistance
 from dataset.datamodule import DataModule, DatasetDP
-from callbacks import RolloutCallback
+
 
 pl.seed_everything(42, workers=True)
 
-dataset_dir = "./data/deforming_plate"
 batch_size = 25
 noise_std = 3e-3
 
@@ -24,7 +24,7 @@ chckp_path = Path(f'outputs/runs/{name}')
 chckp_path.mkdir(exist_ok=True, parents=True)
 
 dataset_dir="./data/deforming_plate_debug"
-#wandb_logger = WandbLogger(name=name, project='MeshGraph')
+wandb_logger = WandbLogger(name=name, project='MeshGraph')
 checkpoint = ModelCheckpoint(dirpath=chckp_path._str, monitor='val_loss', save_top_k=3)
 
 
@@ -36,21 +36,22 @@ data_module = DataModule(dataset_dir=dataset_dir,
                         num_workers=1, 
                         transforms=transforms)
 
-rollout_data = DatasetDP(dataset_dir=dataset_dir, split='train')
+rollout_data = DatasetDP(dataset_dir=dataset_dir, split='train', trajectory=0)
 rollout_loader = rollout_data.get_loader(batch_size=1, shuffle=False, num_workers=1)
 
-rollout = RolloutCallback(rollout_loader, 0, transforms)
+rollout = RolloutCallback(rollout_loader, transforms)
 
 
 simulator = Simulator(message_passing_num=15, node_input_size=7, edge_input_size=4,
                         transforms=transforms)
 
 trainer = pl.Trainer(accelerator="gpu" if torch.cuda.is_available() else 0, 
-                        max_epochs=50, 
+                        max_epochs=100000, 
                         logger=wandb_logger,
                         callbacks=[checkpoint, rollout],
                         num_sanity_val_steps=0,
                         deterministic=True,
-                        overfit_batches=3)
+                        check_val_every_n_epoch=25
+                        )
     
-#trainer.fit(simulator, datamodule=data_module)
+trainer.fit(simulator, datamodule=data_module)

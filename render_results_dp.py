@@ -102,46 +102,46 @@ def plot3D_position_stress(data, n, step):
         return fig
 
 
-result_files = glob.glob('result/*.pkl')
-os.makedirs('videos', exist_ok=True)
+# result_files = glob.glob('result/*.pkl')
+# os.makedirs('videos', exist_ok=True)
 
-for index, file in enumerate(result_files):
+# for index, file in enumerate(result_files):
 
-    with open(file, 'rb') as f:
-        result, n = pickle.load(f)
-    n = n.cpu().detach().numpy()
+#     with open(file, 'rb') as f:
+#         result, n = pickle.load(f)
+#     n = n.cpu().detach().numpy()
 
-    file_name = 'videos/output%d.mp4'%index
+#     file_name = 'videos/output%d.mp4'%index
 
-    #fourcc = cv2.VideoWriter_fourcc(*'XVID')  # 保存视频的编码
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(file_name, fourcc, 10.0, (1000, 800))
+#     #fourcc = cv2.VideoWriter_fourcc(*'XVID')  # 保存视频的编码
+#     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+#     out = cv2.VideoWriter(file_name, fourcc, 10.0, (1000, 800))
 
-    r_t = result[0][:, 0]
+#     r_t = result[0][:, 0]
 
-    v_max = np.max(r_t)
-    v_min = np.min(r_t)
+#     v_max = np.max(r_t)
+#     v_min = np.min(r_t)
 
-    colorbar = None
-    skip=5
+#     colorbar = None
+#     skip=5
     
-    def render(i):
+#     def render(i):
 
-        step = i * skip
-        target = result[1][step]
-        predicted = result[0][step]
+#         step = i * skip
+#         target = result[1][step]
+#         predicted = result[0][step]
 
-        fig = plot3D_position_stress(predicted, n, step)
+#         fig = plot3D_position_stress(predicted, n, step)
 
-        fig.write_image(f'./frame.png', width=1000, height=800, scale=2)
+#         fig.write_image(f'./frame.png', width=1000, height=800, scale=2)
 
-        img = cv2.imread(f'./frame.png')
-        img = cv2.resize(img, (1000, 800))
-        out.write(img)
+#         img = cv2.imread(f'./frame.png')
+#         img = cv2.resize(img, (1000, 800))
+#         out.write(img)
 
 
-    for i in tqdm(range(399), total=400//skip):
-        if i*skip < 350:
-            render(i)
-    out.release()
-    print('video %s saved'%file_name)
+#     for i in tqdm(range(399), total=400//skip):
+#         if i*skip < 350:
+#             render(i)
+#     out.release()
+#     print('video %s saved'%file_name)

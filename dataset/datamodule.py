@@ -13,7 +13,7 @@ import os.path as osp
 
 class DatasetDP(Dataset):
 
-    def __init__(self, dataset_dir, split='test',):
+    def __init__(self, dataset_dir, split='test', trajectory=None):
 
         dataset_dir = osp.join(dataset_dir, split+'.h5')
         self.dataset_dir = dataset_dir
@@ -21,7 +21,7 @@ class DatasetDP(Dataset):
         self.file_handle = h5py.File(dataset_dir, "r")
         self.data_keys = ("mesh_pos", "world_pos", "stress", "node_type", "cells")
         self.steps_trajectory = 400
-        self.load_dataset()
+        self.load_dataset(trajectory)
 
     @staticmethod
     def datas_to_graph(datas, num, step, metadata):
@@ -35,18 +35,21 @@ class DatasetDP(Dataset):
         x = torch.cat((world_crds[0], stress[0]), dim=-1)
         y = torch.cat((world_crds[1], stress[1]), dim=-1)
 
-        g = Data(x=x, y=y, face=face, n=node_type, pos=world_crds[0], mesh_pos=mesh_crds, num=num)
+        g = Data(x=x, y=y, face=face, n=node_type, pos=world_crds[0], mesh_pos=mesh_crds, num=num, step=step)
         
         return g
 
-    def load_dataset(self):
+    def load_dataset(self, trajectory=None):
 
         self.dataset = []
 
         keys = list(self.file_handle.keys())
         self.trajectories = {k: self.file_handle[k] for k in keys}
+        if trajectory is not None:
+            self.trajectories = {str(trajectory): self.trajectories[str(trajectory)]}
 
         for num, trajectory in self.trajectories.items():
+
             for step in range(self.steps_trajectory-1):
 
                 datas = []
@@ -84,7 +87,7 @@ class DataModule(pl.LightningDataModule):
         self.dataset_dir = dataset_dir
         self.batch_size = batch_size
         self.num_workers = num_workers
-        self.train_split = 'test'
+        self.train_split = 'train'
         self.valid_split = 'valid'
         self.transforms = transforms
 
